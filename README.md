@@ -14,7 +14,7 @@ Wire contract: [`docs/contract.md`](docs/contract.md) (source of truth:
 | Rust | [`rs/`](rs/) | `rmcp` (official Rust SDK) | **implemented** |
 | TypeScript / JavaScript | [`ts/`](ts/) | `@modelcontextprotocol/client` (one package serves both) | **implemented** |
 | Python | [`py/`](py/) | `mcp` (official Python SDK) | **implemented** |
-| C++ | [`cpp/`](cpp/) | [Neumann-Labs/mcp-cpp](https://github.com/Neumann-Labs/mcp-cpp) (no official C++ SDK exists) | planned |
+| C++ | [`cpp/`](cpp/) | [Neumann-Labs/mcp-cpp](https://github.com/Neumann-Labs/mcp-cpp) v0.1.0 (no official C++ SDK exists) | **implemented** (stdio is POSIX-only) |
 
 ## What you get
 
@@ -42,6 +42,22 @@ try {
 await gw.close();
 ```
 
+## C++ example
+
+```cpp
+#include <cerberus/sdk.hpp>
+
+auto gw = cerberus::Gateway::connect_stdio();
+for (const auto& t : gw.list_tools())
+    std::cout << t.name << " -> " << t.server << "::" << t.tool << "\n";
+try {
+    auto out = gw.call("github", "search_repos", {{"q", "mcp"}});
+} catch (const cerberus::GatewayError& e) {
+    if (e.retryable) { /* back off and retry */ }
+}
+gw.disconnect();
+```
+
 ## Python example
 
 ```rust
@@ -61,7 +77,12 @@ match gw.call("github", "search_repos", serde_json::json!({"q":"mcp"})).await? {
 cargo test --manifest-path rs/Cargo.toml   # Rust
 cd ts && npm ci && npm run typecheck && npm test && npm run build
 cd py && pip install -e ".[dev]" && pytest
+cmake -S cpp -B cpp/build && cmake --build cpp/build && ctest --test-dir cpp/build
 ```
+
+The C++ stdio transport is POSIX-only (an `mcp-cpp` limitation); build with
+`-DCERBERUS_ENABLE_HTTP=OFF` to skip the cpp-httplib dependency when only
+stdio is needed.
 
 CI runs per-language jobs; the end-to-end tests need a `cerberus` binary and
 are skipped when it is not on `PATH`.
