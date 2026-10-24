@@ -1,0 +1,25 @@
+[package]
+name = "cerberus-sdk"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+license = "MIT"
+description = "Rust SDK for the CerberusMCP gateway: structured tool routing and typed gateway errors."
+repository = "https://github.com/kagan-u/CerberusSDK"
+keywords = ["mcp", "gateway", "cerberus"]
+categories = ["api-bindings"]
+
+[dependencies]
+rmcp = { version = "3.5.1", features = [
+    "client",
+    "transport-child-process",
+    "transport-streamable-http-client-reqwest",
+    "reqwest",
+] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1", features = ["process", "time"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }
