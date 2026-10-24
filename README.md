@@ -11,9 +11,9 @@ Wire contract: [`docs/contract.md`](docs/contract.md) (source of truth:
 
 | Language | Directory | Wraps | Status |
 | --- | --- | --- | --- |
-| Rust | [`rs/`](rs/) | `rmcp` (official Rust SDK) | **pilot, implemented** |
-| TypeScript / JavaScript | [`ts/`](ts/) | `@modelcontextprotocol/client` (one package serves both) | planned |
-| Python | [`py/`](py/) | `mcp` (official Python SDK) | planned |
+| Rust | [`rs/`](rs/) | `rmcp` (official Rust SDK) | **implemented** |
+| TypeScript / JavaScript | [`ts/`](ts/) | `@modelcontextprotocol/client` (one package serves both) | **implemented** |
+| Python | [`py/`](py/) | `mcp` (official Python SDK) | **implemented** |
 | C++ | [`cpp/`](cpp/) | [Neumann-Labs/mcp-cpp](https://github.com/Neumann-Labs/mcp-cpp) (no official C++ SDK exists) | planned |
 
 ## What you get
@@ -26,7 +26,23 @@ Wire contract: [`docs/contract.md`](docs/contract.md) (source of truth:
 - **Connections** — stdio (spawn `cerberus gateway start --transport stdio`)
   or streamable HTTP with bearer auth.
 
-## Rust example
+## TypeScript example
+
+```ts
+import { Gateway } from "cerberus-sdk";
+
+const gw = await Gateway.connectStdio("cerberus");
+for (const t of await gw.listTools()) console.log(t.name, t.server, t.tool);
+try {
+  const out = await gw.call("github", "search_repos", { q: "mcp" });
+  console.log(out.text, out.structured);
+} catch (e) {
+  if (e instanceof GatewayError && e.retryable) { /* back off and retry */ }
+}
+await gw.close();
+```
+
+## Python example
 
 ```rust
 let gw = cerberus_sdk::Gateway::connect_stdio("cerberus").await?;
@@ -42,7 +58,9 @@ match gw.call("github", "search_repos", serde_json::json!({"q":"mcp"})).await? {
 ## Development
 
 ```sh
-cargo test --manifest-path rs/Cargo.toml
+cargo test --manifest-path rs/Cargo.toml   # Rust
+cd ts && npm ci && npm run typecheck && npm test && npm run build
+cd py && pip install -e ".[dev]" && pytest
 ```
 
 CI runs per-language jobs; the end-to-end tests need a `cerberus` binary and

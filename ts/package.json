@@ -1,0 +1,38 @@
+{
+  "name": "cerberus-sdk",
+  "version": "0.1.0",
+  "description": "TypeScript/JavaScript SDK for the CerberusMCP gateway: structured tool routing and typed gateway errors.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kagan-u/CerberusSDK.git"
+  },
+  "type": "module",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/client": "^2.4.0"
+  },
+  "peerDependencies": {
+    "zod": "^4.2.0"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.0",
+    "vitest": "^4.0.0",
+    "zod": "^4.2.0"
+  }
+}
