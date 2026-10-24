@@ -23,3 +23,11 @@ tokio = { version = "1", features = ["process", "time"] }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }
+# Extra rmcp features for the e2e fixtures: the fake upstream example acts as
+# an MCP *server* over stdio. Features are additive with the client set above.
+rmcp = { version = "3.5.1", features = [
+    "server",
+    "transport-io",
+    "transport-child-process",
+    "transport-streamable-http-client-reqwest",
+] }

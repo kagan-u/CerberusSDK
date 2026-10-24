@@ -17,6 +17,9 @@ jobs:
           workspaces: rs
       - run: cargo fmt --manifest-path rs/Cargo.toml -- --check
       - run: cargo clippy --manifest-path rs/Cargo.toml --all-targets -- -D warnings
+      # e2e: real `cerberus` gateway binary as a sibling checkout
+      - run: git clone --depth 1 https://github.com/kagan-u/CerberusMCP.git ../CerberusMCP
+      - run: cargo build --manifest-path ../CerberusMCP/Cargo.toml
       - run: cargo test --manifest-path rs/Cargo.toml
 
   typescript:

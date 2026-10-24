@@ -80,6 +80,15 @@ cd py && pip install -e ".[dev]" && pytest
 cmake -S cpp -B cpp/build && cmake --build cpp/build && ctest --test-dir cpp/build
 ```
 
+### End-to-end tests (Rust)
+
+`rs/tests/e2e.rs` drives a **real** `cerberus gateway start --transport stdio`
+through the SDK: it verifies `_meta["cerberus.dev/route"]` on `tools/list`,
+policy filtering, a live `tools/call` round trip against a fake upstream, and
+the `policy_denied` error envelope. It skips (and passes) when no gateway
+binary is available — provide one via `CERBERUS_BIN` or a sibling checkout at
+`../CerberusMCP/target/debug/cerberus` (CI does the latter).
+
 The C++ stdio transport is POSIX-only (an `mcp-cpp` limitation); build with
 `-DCERBERUS_ENABLE_HTTP=OFF` to skip the cpp-httplib dependency when only
 stdio is needed.
