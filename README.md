@@ -80,14 +80,26 @@ cd py && pip install -e ".[dev]" && pytest
 cmake -S cpp -B cpp/build && cmake --build cpp/build && ctest --test-dir cpp/build
 ```
 
-### End-to-end tests (Rust)
+### End-to-end tests (all four SDKs)
 
-`rs/tests/e2e.rs` drives a **real** `cerberus gateway start --transport stdio`
-through the SDK: it verifies `_meta["cerberus.dev/route"]` on `tools/list`,
-policy filtering, a live `tools/call` round trip against a fake upstream, and
-the `policy_denied` error envelope. It skips (and passes) when no gateway
-binary is available — provide one via `CERBERUS_BIN` or a sibling checkout at
-`../CerberusMCP/target/debug/cerberus` (CI does the latter).
+Every SDK has a live round trip against a **real** `cerberus gateway start
+--transport stdio`, sharing one fixture set:
+
+- `rs/tests/e2e.rs` — `cargo test --test e2e`
+- `ts/test/e2e.test.ts` — `npx vitest run` (runs with the unit tests)
+- `py/tests/test_e2e.py` — `pytest` (runs with the unit tests)
+- `cpp/tests/e2e.cpp` — `ctest` (registered as `cerberus_e2e`)
+
+Each verifies route resolution from `_meta["cerberus.dev/route"]`, policy
+filtering out of `tools/list`, a live `tools/call` round trip against the
+fake upstream (`rs/examples/fake_upstream.rs`), and the `policy_denied`
+error envelope (code/retryable/exit code/server/tool). Fixtures resolve from
+`CERBERUS_BIN` / `CERBERUS_FAKE_UPSTREAM_BIN`, falling back to sibling
+checkouts (`../CerberusMCP/target/debug/cerberus`,
+`../rs/target/debug/examples/fake_upstream`). Tests skip (and pass) when
+fixtures are missing; `CERBERUS_REQUIRE_E2E=1` — set by the CI `e2e` job,
+which builds both fixtures once and runs all four harnesses — turns missing
+fixtures into failures.
 
 The C++ stdio transport is POSIX-only (an `mcp-cpp` limitation); build with
 `-DCERBERUS_ENABLE_HTTP=OFF` to skip the cpp-httplib dependency when only

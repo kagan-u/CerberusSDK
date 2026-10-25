@@ -43,4 +43,11 @@ if(CERBERUS_BUILD_TESTS)
     add_executable(cerberus_sdk_tests tests/test_sdk.cpp)
     target_link_libraries(cerberus_sdk_tests PRIVATE cerberus::sdk)
     add_test(NAME cerberus_sdk_unit COMMAND cerberus_sdk_tests)
+
+    add_executable(cerberus_e2e tests/e2e.cpp)
+    target_link_libraries(cerberus_e2e PRIVATE cerberus::sdk)
+    target_compile_definitions(cerberus_e2e PRIVATE
+        CERBERUS_E2E_ROOT="${CMAKE_CURRENT_SOURCE_DIR}")
+    add_test(NAME cerberus_e2e COMMAND cerberus_e2e)
+    set_tests_properties(cerberus_e2e PROPERTIES SKIP_RETURN_CODE 77)
 endif()

@@ -17,9 +17,6 @@ jobs:
           workspaces: rs
       - run: cargo fmt --manifest-path rs/Cargo.toml -- --check
       - run: cargo clippy --manifest-path rs/Cargo.toml --all-targets -- -D warnings
-      # e2e: real `cerberus` gateway binary as a sibling checkout
-      - run: git clone --depth 1 https://github.com/kagan-u/CerberusMCP.git ../CerberusMCP
-      - run: cargo build --manifest-path ../CerberusMCP/Cargo.toml
       - run: cargo test --manifest-path rs/Cargo.toml
 
   typescript:
@@ -68,3 +65,41 @@ jobs:
       - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
       - run: cmake --build build -j2
       - run: ctest --test-dir build --output-on-failure
+
+  # Live round trips of every SDK against a real `cerberus` gateway binary
+  # (built from a sibling checkout) and the shared fake_upstream fixture.
+  e2e:
+    runs-on: ubuntu-latest
+    env:
+      CERBERUS_REQUIRE_E2E: "1"
+      CERBERUS_BIN: ${{ github.workspace }}/../CerberusMCP/target/debug/cerberus
+      CERBERUS_FAKE_UPSTREAM_BIN: ${{ github.workspace }}/rs/target/debug/examples/fake_upstream
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            rs
+            ../CerberusMCP
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ts/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - run: git clone --depth 1 https://github.com/kagan-u/CerberusMCP.git ../CerberusMCP
+      - run: cargo build --manifest-path ../CerberusMCP/Cargo.toml
+      - run: cargo build --example fake_upstream --manifest-path rs/Cargo.toml
+      - run: cargo test --manifest-path rs/Cargo.toml --test e2e
+      - run: npm ci
+        working-directory: ts
+      - run: npm test
+        working-directory: ts
+      - run: pip install -e ".[dev]"
+        working-directory: py
+      - run: pytest -q
+        working-directory: py
+      - run: cmake -S cpp -B cpp/build -DCMAKE_BUILD_TYPE=Release && cmake --build cpp/build -j2 && ctest --test-dir cpp/build --output-on-failure
