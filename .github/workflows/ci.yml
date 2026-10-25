@@ -79,9 +79,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: |
-            rs
-            ../CerberusMCP
+          workspaces: rs
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -90,7 +88,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
-      - run: git clone --depth 1 https://github.com/kagan-u/CerberusMCP.git ../CerberusMCP
+      # Fresh checkout every run: the sibling path is also this job's
+      # CERBERUS_BIN default, and a cached checkout would pin old sources.
+      - run: rm -rf ../CerberusMCP && git clone --depth 1 https://github.com/kagan-u/CerberusMCP.git ../CerberusMCP
       - run: cargo build --manifest-path ../CerberusMCP/Cargo.toml
       - run: cargo build --example fake_upstream --manifest-path rs/Cargo.toml
       - run: cargo test --manifest-path rs/Cargo.toml --test e2e
