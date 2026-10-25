@@ -345,7 +345,8 @@ impl Gateway {
     pub async fn connect_http(url: &str, bearer: Option<String>) -> Result<Self, Error> {
         let mut config = StreamableHttpClientTransportConfig::with_uri(url.to_string());
         if let Some(token) = bearer {
-            config.auth_header = Some(format!("Bearer {token}"));
+            // rmcp adds the `Bearer ` prefix itself; the field takes the raw token.
+            config.auth_header = Some(token);
         }
         let transport = StreamableHttpClientTransport::from_config(config);
         let service = tokio::time::timeout(DEFAULT_CONNECT_TIMEOUT, ().serve(transport))

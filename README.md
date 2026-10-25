@@ -86,6 +86,7 @@ Every SDK has a live round trip against a **real** `cerberus gateway start
 --transport stdio`, sharing one fixture set:
 
 - `rs/tests/e2e.rs` — `cargo test --test e2e`
+- `rs/tests/e2e_http.rs` — `cargo test --test e2e_http` (bearer round trip)
 - `ts/test/e2e.test.ts` — `npx vitest run` (runs with the unit tests)
 - `py/tests/test_e2e.py` — `pytest` (runs with the unit tests)
 - `cpp/tests/e2e.cpp` — `ctest` (registered as `cerberus_e2e`)
@@ -93,7 +94,13 @@ Every SDK has a live round trip against a **real** `cerberus gateway start
 Each verifies route resolution from `_meta["cerberus.dev/route"]`, policy
 filtering out of `tools/list`, a live `tools/call` round trip against the
 fake upstream (`rs/examples/fake_upstream.rs`), and the `policy_denied`
-error envelope (code/retryable/exit code/server/tool). Fixtures resolve from
+error envelope (code/retryable/exit code/server/tool). Each harness also
+starts `cerberus gateway start --transport http --bind 127.0.0.1:0 --token
+…` and repeats the contract over streamable HTTP with bearer auth: the
+connect fails without (or with the wrong) token and succeeds with the right
+one. The C++ harness skips the negative cases — `mcp-cpp` retries 401s
+through its OAuth dance (~30 s per attempt) — so token rejection is
+asserted by the rs/ts/py harnesses instead. Fixtures resolve from
 `CERBERUS_BIN` / `CERBERUS_FAKE_UPSTREAM_BIN`, falling back to sibling
 checkouts (`../CerberusMCP/target/debug/cerberus`,
 `../rs/target/debug/examples/fake_upstream`). Tests skip (and pass) when

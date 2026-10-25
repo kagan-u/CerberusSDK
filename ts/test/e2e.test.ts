@@ -1,4 +1,11 @@
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { spawn, type ChildProcess } from "node:child_process";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -85,6 +92,47 @@ servers:
 
 const suite = haveFixtures ? describe : describe.skip;
 const configDirs: string[] = [];
+const children: ChildProcess[] = [];
+
+const HTTP_TOKEN = "e2e-http-secret";
+
+/** Spawn `cerberus gateway start --transport http` and resolve its URL. */
+async function spawnHttpGateway(config: string): Promise<string> {
+  const child = spawn(
+    cerberus,
+    ["gateway", "start", "--transport", "http", "--bind", "127.0.0.1:0", "--token", HTTP_TOKEN],
+    {
+      env: {
+        ...process.env,
+        CERBERUS_CONFIG_DIR: config,
+        CERBERUS_DATA_DIR: join(config, "data"),
+      },
+      stdio: "ignore",
+    },
+  );
+  children.push(child);
+
+  // The state file names the resolved bind (port 0 -> real port) and lands
+  // just before the server starts accepting.
+  const stateFile = join(config, "data", "state", "gateway.json");
+  const deadline = Date.now() + 15_000;
+  for (;;) {
+    try {
+      const state = JSON.parse(readFileSync(stateFile, "utf8")) as {
+        bind?: string;
+      };
+      if (state.bind && !state.bind.endsWith(":0")) {
+        return `http://${state.bind}/mcp`;
+      }
+    } catch {
+      /* not written yet */
+    }
+    if (Date.now() > deadline) {
+      throw new Error(`gateway state file never reported a port: ${stateFile}`);
+    }
+    await new Promise((r) => setTimeout(r, 50));
+  }
+}
 
 suite("gateway stdio e2e", () => {
   it("lists routed tools, round-trips a call, and shapes policy_denied", async () => {
@@ -125,7 +173,53 @@ suite("gateway stdio e2e", () => {
   });
 });
 
+suite("gateway http e2e", () => {
+  it("enforces bearer auth and serves the routed contract", async () => {
+    const config = mkdtempSync(join(tmpdir(), "cerberus-sdk-e2e-http-"));
+    configDirs.push(config);
+    writeFileSync(join(config, "cerberus.yaml"), registry(upstream));
+
+    const url = await spawnHttpGateway(config);
+
+    // Missing and wrong tokens are rejected at the HTTP layer.
+    await expect(Gateway.connectHttp(url)).rejects.toThrow();
+    await expect(
+      Gateway.connectHttp(url, { bearer: "wrong-secret" }),
+    ).rejects.toThrow();
+
+    // The real token gets the full contract.
+    const gw = await Gateway.connectHttp(url, { bearer: HTTP_TOKEN });
+    try {
+      const tools = await gw.listTools();
+      const echo = tools.find((t) => t.name === "echo-server__echo");
+      expect(echo).toMatchObject({ server: "echo-server", tool: "echo" });
+      expect(tools.some((t) => t.name.startsWith("locked__"))).toBe(false);
+
+      const out = await gw.call("echo-server", "echo", { text: "hi" });
+      expect(out.text).toBe("echo: hi");
+
+      const err = await gw.call("locked", "echo", { text: "hi" }).then(
+        () => undefined,
+        (e: unknown) => e,
+      );
+      expect(err).toBeInstanceOf(GatewayError);
+      expect(err).toMatchObject({
+        code: "policy_denied",
+        retryable: false,
+        exitCode: 6,
+        server: "locked",
+        tool: "echo",
+      });
+    } finally {
+      await gw.close();
+    }
+  });
+});
+
 afterAll(() => {
+  for (const child of children) {
+    child.kill();
+  }
   for (const dir of configDirs) {
     rmSync(dir, { recursive: true, force: true });
   }

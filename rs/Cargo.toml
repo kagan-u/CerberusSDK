@@ -22,7 +22,7 @@ thiserror = "2"
 tokio = { version = "1", features = ["process", "time"] }
 
 [dev-dependencies]
-tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "time", "fs"] }
 # Extra rmcp features for the e2e fixtures: the fake upstream example acts as
 # an MCP *server* over stdio. Features are additive with the client set above.
 rmcp = { version = "3.7.0", features = [

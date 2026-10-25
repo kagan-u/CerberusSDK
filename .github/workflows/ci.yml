@@ -93,7 +93,7 @@ jobs:
       - run: rm -rf ../CerberusMCP && git clone --depth 1 https://github.com/kagan-u/CerberusMCP.git ../CerberusMCP
       - run: cargo build --manifest-path ../CerberusMCP/Cargo.toml
       - run: cargo build --example fake_upstream --manifest-path rs/Cargo.toml
-      - run: cargo test --manifest-path rs/Cargo.toml --test e2e
+      - run: cargo test --manifest-path rs/Cargo.toml --test e2e --test e2e_http
       - run: npm ci
         working-directory: ts
       - run: npm test
