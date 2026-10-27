@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-25
+
+### Changed
+
+- The end-to-end harnesses in all four languages configure the gateway
+  with the schema-v2 TOML registry (`conf.cerberus`) instead of the
+  legacy YAML (`cerberus.yaml`), matching CerberusMCP 0.3.x. Fixture
+  command paths are escaped, so the same fixtures work for Windows
+  paths.
+
 ## [0.1.0] - 2026-10-25
 
 ### Added

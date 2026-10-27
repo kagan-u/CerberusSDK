@@ -1,6 +1,6 @@
 {
   "name": "cerberus-sdk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "TypeScript/JavaScript SDK for the CerberusMCP gateway: structured tool routing and typed gateway errors.",
   "license": "MIT",
   "repository": {

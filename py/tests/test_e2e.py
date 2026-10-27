@@ -42,35 +42,35 @@ pytestmark = pytest.mark.skipif(
     ),
 )
 
-REGISTRY = """schema_version: 1
+REGISTRY = """schema_version = 2
 
-settings:
-  default_mode: direct
+[settings]
+default_mode = "direct"
 
-servers:
-  echo-server:
-    description: e2e echo upstream
-    transport:
-      type: stdio
-      command: '{upstream}'
-      args: []
-      env:
-        CERBERUS_FAKE_UPSTREAM:
-          source: literal
-          value: "1"
-    timeout_ms: 15000
-    policy:
-      deny_tools: []
+[servers.echo-server]
+description = "e2e echo upstream"
+timeout_ms = 15000
 
-  locked:
-    description: e2e upstream whose echo tool is denied
-    transport:
-      type: stdio
-      command: '{upstream}'
-      args: []
-    timeout_ms: 15000
-    policy:
-      deny_tools: ["echo"]
+[servers.echo-server.transport]
+type = "stdio"
+command = "__UPSTREAM__"
+args = []
+env = { CERBERUS_FAKE_UPSTREAM = { source = "literal", value = "1" } }
+
+[servers.echo-server.policy]
+deny_tools = []
+
+[servers.locked]
+description = "e2e upstream whose echo tool is denied"
+timeout_ms = 15000
+
+[servers.locked.transport]
+type = "stdio"
+command = "__UPSTREAM__"
+args = []
+
+[servers.locked.policy]
+deny_tools = ["echo"]
 """
 
 
@@ -115,8 +115,8 @@ async def _spawn_http_gateway(config: Path) -> tuple[asyncio.subprocess.Process,
 async def test_gateway_http_bearer_roundtrip(tmp_path: Path) -> None:
     assert HAVE_FIXTURES, f"fixtures missing: {CERBERUS}, {UPSTREAM}"
 
-    (tmp_path / "cerberus.yaml").write_text(
-        REGISTRY.format(upstream=UPSTREAM.resolve()), encoding="utf-8"
+    (tmp_path / "conf.cerberus").write_text(
+        REGISTRY.replace("__UPSTREAM__", str(UPSTREAM.resolve())), encoding="utf-8"
     )
     process, url = await _spawn_http_gateway(tmp_path)
     try:
@@ -154,8 +154,8 @@ async def test_gateway_http_bearer_roundtrip(tmp_path: Path) -> None:
 async def test_gateway_stdio_roundtrip(tmp_path: Path) -> None:
     assert HAVE_FIXTURES, f"fixtures missing: {CERBERUS}, {UPSTREAM}"
 
-    (tmp_path / "cerberus.yaml").write_text(
-        REGISTRY.format(upstream=UPSTREAM.resolve()), encoding="utf-8"
+    (tmp_path / "conf.cerberus").write_text(
+        REGISTRY.replace("__UPSTREAM__", str(UPSTREAM.resolve())), encoding="utf-8"
     )
     gw = await Gateway.connect_stdio(
         str(CERBERUS),

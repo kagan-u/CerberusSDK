@@ -58,35 +58,37 @@ if (!haveFixtures && requireEnv) {
 }
 
 function registry(upstreamPath: string): string {
-  return `schema_version: 1
+  // TOML basic strings: escape backslashes (Windows paths).
+  const up = upstreamPath.replaceAll("\\", "\\\\");
+  return `schema_version = 2
 
-settings:
-  default_mode: direct
+[settings]
+default_mode = "direct"
 
-servers:
-  echo-server:
-    description: e2e echo upstream
-    transport:
-      type: stdio
-      command: '${upstreamPath}'
-      args: []
-      env:
-        CERBERUS_FAKE_UPSTREAM:
-          source: literal
-          value: "1"
-    timeout_ms: 15000
-    policy:
-      deny_tools: []
+[servers.echo-server]
+description = "e2e echo upstream"
+timeout_ms = 15000
 
-  locked:
-    description: e2e upstream whose echo tool is denied
-    transport:
-      type: stdio
-      command: '${upstreamPath}'
-      args: []
-    timeout_ms: 15000
-    policy:
-      deny_tools: ["echo"]
+[servers.echo-server.transport]
+type = "stdio"
+command = "${up}"
+args = []
+env = { CERBERUS_FAKE_UPSTREAM = { source = "literal", value = "1" } }
+
+[servers.echo-server.policy]
+deny_tools = []
+
+[servers.locked]
+description = "e2e upstream whose echo tool is denied"
+timeout_ms = 15000
+
+[servers.locked.transport]
+type = "stdio"
+command = "${up}"
+args = []
+
+[servers.locked.policy]
+deny_tools = ["echo"]
 `;
 }
 
@@ -138,7 +140,7 @@ suite("gateway stdio e2e", () => {
   it("lists routed tools, round-trips a call, and shapes policy_denied", async () => {
     const config = mkdtempSync(join(tmpdir(), "cerberus-sdk-e2e-"));
     configDirs.push(config);
-    writeFileSync(join(config, "cerberus.yaml"), registry(upstream));
+    writeFileSync(join(config, "conf.cerberus"), registry(upstream));
 
     const gw = await Gateway.connectStdio(cerberus, {
       env: {
@@ -177,7 +179,7 @@ suite("gateway http e2e", () => {
   it("enforces bearer auth and serves the routed contract", async () => {
     const config = mkdtempSync(join(tmpdir(), "cerberus-sdk-e2e-http-"));
     configDirs.push(config);
-    writeFileSync(join(config, "cerberus.yaml"), registry(upstream));
+    writeFileSync(join(config, "conf.cerberus"), registry(upstream));
 
     const url = await spawnHttpGateway(config);
 

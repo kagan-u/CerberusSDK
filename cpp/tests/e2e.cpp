@@ -59,41 +59,46 @@ fs::path resolve_env_or(const char* var, const fs::path& fallback) {
     return fallback;
 }
 
-std::string registry_yaml(const fs::path& upstream) {
-    const std::string up = upstream.string();
-    return "schema_version: 1\n"
+std::string registry_toml(const fs::path& upstream) {
+    std::string esc;
+    for (char c : upstream.string()) {
+        if (c == '\\') {
+            esc += "\\\\";
+        } else if (c == '"') {
+            esc += "\\\"";
+        } else {
+            esc += c;
+        }
+    }
+    return "schema_version = 2\n"
            "\n"
-           "settings:\n"
-           "  default_mode: direct\n"
+           "[settings]\n"
+           "default_mode = \"direct\"\n"
            "\n"
-           "servers:\n"
-           "  echo-server:\n"
-           "    description: e2e echo upstream\n"
-           "    transport:\n"
-           "      type: stdio\n"
-           "      command: '" +
-           up +
-           "'\n"
-           "      args: []\n"
-           "      env:\n"
-           "        CERBERUS_FAKE_UPSTREAM:\n"
-           "          source: literal\n"
-           "          value: \"1\"\n"
-           "    timeout_ms: 15000\n"
-           "    policy:\n"
-           "      deny_tools: []\n"
+           "[servers.echo-server]\n"
+           "description = \"e2e echo upstream\"\n"
+           "timeout_ms = 15000\n"
            "\n"
-           "  locked:\n"
-           "    description: e2e upstream whose echo tool is denied\n"
-           "    transport:\n"
-           "      type: stdio\n"
-           "      command: '" +
-           up +
-           "'\n"
-           "      args: []\n"
-           "    timeout_ms: 15000\n"
-           "    policy:\n"
-           "      deny_tools: [\"echo\"]\n";
+           "[servers.echo-server.transport]\n"
+           "type = \"stdio\"\n"
+           "command = \"" + esc + "\"\n"
+           "args = []\n"
+           "env = { CERBERUS_FAKE_UPSTREAM = { source = \"literal\", value = \"1\" } }\n"
+           "\n"
+           "[servers.echo-server.policy]\n"
+           "deny_tools = []\n"
+           "\n"
+           "[servers.locked]\n"
+           "description = \"e2e upstream whose echo tool is denied\"\n"
+           "timeout_ms = 15000\n"
+           "\n"
+           "[servers.locked.transport]\n"
+           "type = \"stdio\"\n"
+           "command = \"" + esc + "\"\n"
+           "args = []\n"
+           "\n"
+           "[servers.locked.policy]\n"
+           "deny_tools = [\"echo\"]\n";
 }
 
 constexpr const char* kHttpToken = "e2e-http-secret";
@@ -168,11 +173,11 @@ int main() {
     const fs::path config = buf.data();
 
     {
-        std::ofstream out(config / "cerberus.yaml");
+        std::ofstream out(config / "conf.cerberus");
         if (!out) {
-            return fail("cannot write cerberus.yaml");
+            return fail("cannot write conf.cerberus");
         }
-        out << registry_yaml(fs::absolute(upstream));
+        out << registry_toml(fs::absolute(upstream));
     }
     setenv("CERBERUS_CONFIG_DIR", config.c_str(), 1);
     setenv("CERBERUS_DATA_DIR", (config / "data").string().c_str(), 1);
@@ -251,8 +256,8 @@ int main() {
         } else {
             const fs::path hconfig = hbuf.data();
             {
-                std::ofstream out(hconfig / "cerberus.yaml");
-                out << registry_yaml(fs::absolute(upstream));
+                std::ofstream out(hconfig / "conf.cerberus");
+                out << registry_toml(fs::absolute(upstream));
             }
 
             const std::string bind = "127.0.0.1:0";

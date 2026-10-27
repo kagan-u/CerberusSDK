@@ -86,39 +86,41 @@ async fn gateway_stdio_roundtrip() {
     std::fs::create_dir_all(&config).unwrap();
     std::fs::create_dir_all(&data).unwrap();
 
+    let up = upstream.replace('\\', "\\\\");
     let registry = format!(
-        r#"schema_version: 1
+        r#"
+schema_version = 2
 
-settings:
-  default_mode: direct
+[settings]
+default_mode = "direct"
 
-servers:
-  echo-server:
-    description: e2e echo upstream
-    transport:
-      type: stdio
-      command: '{upstream}'
-      args: []
-      env:
-        CERBERUS_FAKE_UPSTREAM:
-          source: literal
-          value: "1"
-    timeout_ms: 15000
-    policy:
-      deny_tools: []
+[servers.echo-server]
+description = "e2e echo upstream"
+timeout_ms = 15000
 
-  locked:
-    description: e2e upstream whose echo tool is denied
-    transport:
-      type: stdio
-      command: '{upstream}'
-      args: []
-    timeout_ms: 15000
-    policy:
-      deny_tools: ["echo"]
+[servers.echo-server.transport]
+type = "stdio"
+command = "{up}"
+args = []
+env = {{ CERBERUS_FAKE_UPSTREAM = {{ source = "literal", value = "1" }} }}
+
+[servers.echo-server.policy]
+deny_tools = []
+
+[servers.locked]
+description = "e2e upstream whose echo tool is denied"
+timeout_ms = 15000
+
+[servers.locked.transport]
+type = "stdio"
+command = "{up}"
+args = []
+
+[servers.locked.policy]
+deny_tools = ["echo"]
 "#
     );
-    std::fs::write(config.join("cerberus.yaml"), registry).unwrap();
+    std::fs::write(config.join("conf.cerberus"), registry).unwrap();
 
     // SAFETY: this test binary contains exactly this one test, so no other
     // thread in this process reads or writes the process environment.
